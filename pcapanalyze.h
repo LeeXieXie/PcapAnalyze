@@ -34,10 +34,10 @@ struct pcap_file_header {
     bpf_u_int32 linktype; //data link type (LINKTYPE_*)
 };
 //时间戳
-struct timestamp {
+struct time_stamp {
     bpf_int32 tv_sec; //seconds
     bpf_int32 tv_usec; //microseconds
-} timestamp;
+}timeStamp;
 /*
  * pcap数据包头部
  * ts_sec(4B): 0x00000000 (timestamp seconds)
