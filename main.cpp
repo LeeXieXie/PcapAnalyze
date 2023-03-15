@@ -4,6 +4,8 @@
 #include <vector>
 #include <ctime>
 #include <cstdlib>
+#include "pcapanalyze.h"
+
 
 void process_pcap(std::string filename) {
    std::ifstream pcap_file(filename, std::ios::binary);
