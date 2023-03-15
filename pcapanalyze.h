@@ -46,7 +46,7 @@ struct time_stamp {
  * orig_len(4B): 0x00000000 (actual length of packet)
  */
 struct pcap_pkthdr {
-    struct timestamp ts; //time stamp
+    struct time_stamp ts; //time stamp
     bpf_u_int32 caplen; //length of portion present
     bpf_u_int32 len; //length this packet (off wire)
 };
@@ -115,6 +115,8 @@ struct tcp_header {
     u_int32 seq; //序列号
     u_int32 ack_seq; //确认号
     u_int8 doff; //数据偏移
+    u_int8 len; //长度
+    u_int8 flag; //标志位
     u_int8 fin; //FIN标志
     u_int8 syn; //SYN标志
     u_int8 rst; //RST标志
