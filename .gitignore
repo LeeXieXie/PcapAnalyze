@@ -1,2 +1,8 @@
 # 项目排除路径
 /cmake-build-debug/
+
+*.pcap
+*.txt
+test
+/cmake-build-debug-event-trace/
+/cmake-build-release/

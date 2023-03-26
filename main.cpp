@@ -1,11 +1,15 @@
 #include <iostream>
-#include <string>
+#include <cstring>
 #include <fstream>
 #include <vector>
 #include <ctime>
 #include <cstdlib>
-#include <winsock.h>
+#include <cmath>
+#include <winsock2.h>
 #include <ws2tcpip.h>
+#include <bitset>
+//#include <netinet/in.h>
+//#include <arpa/inet.h>
 #include <map>
 #include "pcapanalyze.h"
 #define MAX_PACKET_SIZE 65535 //最大数据包大小
@@ -16,23 +20,30 @@
 
 using namespace std;
 
-int main(int argc, char *argv[]) { //argc是参数个数，argv是参数数组
-    if (argc < 1) { //如果参数个数小于1，说明没有输入文件名
-        std::cout << "Usage: " << argv[0] << " pcap_file" << std::endl;
-        return 0;
-    }
-    char file_input[MAX_Namelen]; //输入的文件名
-    char file_output[MAX_Namelen]; //输出的文件名
-    strcpy(file_input, argv[1]); //将输入的文件名复制到file_input中
-    strcpy(file_output, argv[2]); //将输入的文件名复制到file_output中
 
-    freopen(file_output, "w", stdout); //将标准输出重定向到file_output文件中
 
-    FILE *fp = nullptr; //定义文件指针
-    FILE *output = nullptr; //定义输出文件指针
+//int main(int argc, char *argv[]) { //argc是参数个数，argv是参数数组
+//    if (argc < 1) { //如果参数个数小于1，说明没有输入文件名
+//        cout << "Usage: " << argv[0] << " pcap_file" << endl;
+//        return 0;
+//    }
+//    char file_input[MAX_Namelen]; //输入的文件名
+//    char file_output[MAX_Namelen]; //输出的文件名
+//    strcpy(file_input, argv[1]); //将输入的文件名复制到file_input中
+//    strcpy(file_output, argv[2]); //将输入的文件名复制到file_output中
+//    freopen(file_output, "w", stdout); //将标准输出重定向到file_output文件中
+int main(){ //debug
+
+    char file_input[] = "C:\\VScodeGit\\PcapAnalyze\\10.pcap";
+
+
+
+
+    FILE *fp; //定义文件指针
+    FILE *output; //定义输出文件指针
     int pkt_offset = 0; //数据包偏移量
     int pkt_num = 0; //数据包序号
-    int ip_len = 0; //IP数据包长度
+    int ip_len = 0; //IPv4数据包长度
     int http_len = 0; //HTTP数据包长度
     int tcp_len = 0; //TCP数据包长度
     int ip_protocol = 0; //IP协议类型
@@ -43,81 +54,89 @@ int main(int argc, char *argv[]) { //argc是参数个数，argv是参数数组
     int tcp_flag = 0; //TCP标志位
 
     char standardTime[SIZE];//标准时间
-    char src_ip[SIZE]; //源IP
-    char dst_ip[SIZE]; //目的IP
-    char src_mac[SIZE]; //源MAC
-    char dst_mac[SIZE]; //目的MAC
+    char src_ip[32]; //源IP
+    char dst_ip[32]; //目的IP
+    u_int8 src_mac[6]; //源MAC
+    u_int8 dst_mac[6]; //目的MAC
     char http_data[SIZE]; //HTTP数据
     char dns_data[SIZE]; //DNS数据
     char tcp_data[SIZE]; //TCP数据
     char udp_data[SIZE]; //UDP数据
-    char ip_data[SIZE]; //IP数据
+    char ip_data[SIZE]; //IPv4数据
     char ether_data[SIZE]; //以太网数据
 
 
 
     //定义要读取的数据包头部、以太网帧头部、IP头部、TCP头部、UDP头部、DNS头部
-    struct pcap_pkthdr *pcapHeader = nullptr; //要读取的数据包头部
-    struct ether_header *etherHeader = nullptr; //要读取的以太网帧头部
-    struct ip_header *ipHeader = nullptr; //要读取的IP头部
-    struct tcp_header *tcpHeader = nullptr; //要读取的TCP头部
-    struct udp_header *udpHeader = nullptr; //要读取的UDP头部
-    struct dns_header *dnsHeader = nullptr; //要读取的DNS头部
+    struct pcap_pkthdr *pcapHeader = (struct pcap_pkthdr *)malloc(sizeof(pcap_pkthdr)); //要读取的数据包头部
+    struct ether_header *etherHeader = (struct ether_header *)malloc(sizeof(ether_header)); //要读取的以太网帧头部
+    struct ip_header *ipHeader = (struct ip_header *)malloc(sizeof(ip_header)); //要读取的IPv4头部
+    struct tcp_header *tcpHeader = (struct tcp_header *)malloc(sizeof(tcp_header)); //要读取的TCP头部
+    struct udp_header *udpHeader = (struct udp_header *)malloc(sizeof(udp_header)); //要读取的UDP头部
+    struct dns_header *dnsHeader = (struct dns_header *)malloc(sizeof(dns_header)); //要读取的DNS头部
 
-    /*
-     * 初始化，分配内存
-     */
-    pcapHeader = (struct pcap_pkthdr *) malloc(sizeof(struct pcap_pkthdr));
-    etherHeader = (struct ether_header *) malloc(sizeof(struct ether_header));
-    ipHeader = (struct ip_header *) malloc(sizeof(struct ip_header));
-    tcpHeader = (struct tcp_header *) malloc(sizeof(struct tcp_header));
-    udpHeader = (struct udp_header *) malloc(sizeof(struct udp_header));
-    dnsHeader = (struct dns_header *) malloc(sizeof(struct dns_header));
-
-    std::cout << "Processing!!!" << std::endl;
+//    struct ether_header *etherHeader; //要读取的以太网帧头部
+//    struct ip_header *ipHeader; //要读取的IPv4头部
+//    struct tcp_header *tcpHeader; //要读取的TCP头部
+//    struct udp_header *udpHeader; //要读取的UDP头部
+//    struct dns_header *dnsHeader; //要读取的DNS头部
+//
+//    /*
+//     * 初始化，分配内存
+//     */
+//    pcapHeader = (struct pcap_pkthdr *) malloc(sizeof(pcap_pkthdr));
+//    etherHeader = (struct ether_header *) malloc(sizeof(ether_header));
+//    ipHeader = (ip_header *) malloc(sizeof(ip_header));
+//    cout << sizeof(ip_header) << endl;
+//    tcpHeader = (struct tcp_header *) malloc(sizeof(tcp_header));
+//    udpHeader = (struct udp_header *) malloc(sizeof(udp_header));
+//    dnsHeader = (struct dns_header *) malloc(sizeof(dns_header));
+    cout << "Processing!!!" << endl;
     if ((fp = fopen(file_input, "rb")) == NULL) { //打开文件
-        std::cout << "Open '" << file_input << "' failed!!!" << std::endl;
+        cout << "Open '" << file_input << "' failed!!!" << endl;
         exit(0);
     }
-
-    std::cout << "Reading!!!" << std::endl;
+    cout << "Reading!!!" << endl;
     pkt_offset = 24; // pcap文件头部长度为24
     while (fseek(fp, pkt_offset, SEEK_SET) == 0) {
         pkt_num++; //数据包序号
-        memset(pcapHeader, 0, sizeof(struct pcap_pkthdr)); //清空数据包头部
-        if (fread(pcapHeader, sizeof(struct pcap_pkthdr), 1, fp) != 1) { //读取数据包头部
-            std::cout << "Read pcapHeader failed!!!" << std::endl;
+        memset(pcapHeader, 0, sizeof(pcap_pkthdr)); //清空数据包头部
+        if (fread(pcapHeader, 16, 1, fp) != 1) { //读取数据包头部
+            cout << "Read end of " << file_input << endl;
             break;
         }
-        std::cout << "Packet number: " << pkt_num << std::endl;
+        cout << "----------------------------------------" << endl;
+        cout << "Packet No. " << dec << pkt_num << endl;
 
 
-        pkt_offset += sizeof(struct pcap_pkthdr); //数据包头部长度为16
-        pkt_offset += pcapHeader->caplen; //下一个数据包的偏移量
+        pkt_offset += 16 + pcapHeader->caplen; //下一个数据包的偏移量
 
         //读取pcap包时间戳，转换成标准时间
         time_t time = pcapHeader->ts.tv_sec;//秒
         struct tm *p = localtime(&time);// 转换为本地时间
         strftime(standardTime, sizeof(standardTime), "%Y-%m-%d %H:%M:%S", p); //
-        std::cout << "Packet time: " << standardTime << std::endl;
-
-        std::cout << "link layer" << std::endl;
+        cout << "Packet time: " << standardTime << endl;
+        cout << "----------------------------------------" << endl;
+        cout << "link layer" << endl;
         //读取以太网帧头部
-        memset(etherHeader, 0, sizeof(struct ether_header));//清空以太网帧头部
-        if (fread(etherHeader, sizeof(struct ether_header), 1, fp) != 1) { //读取以太网帧头部
-            std::cout << "Read etherHeader failed!!!" << std::endl;
+//        cout << ftell(fp) << endl ;
+
+        memset(etherHeader, 0, sizeof(ether_header));//清空以太网帧头部
+        if (fread(etherHeader, sizeof(ether_header) + 2, 1, fp) != 1) { //读取以太网帧头部
+            cout << "Read etherHeader failed!!!" << endl;
             continue;
         }
-        std::cout << "Source MAC: " << std::endl;
+        cout << "Source MAC: ";
         for (int i = 0; i < 6; ++i) {
             if (i == 5) {
-                std::cout << hex << (int) etherHeader->src_mac[i] << endl;
+                cout << hex << (int) etherHeader->src_mac[i] << endl;
             } else {
-                cout << std::hex << (int) etherHeader->src_mac[i] << ":";
+                cout << hex << (int) etherHeader->src_mac[i] << ":";
             }
         }
 
-        std::cout << "Destination MAC: " << std::endl;
+
+        cout << "Destination MAC: ";
         for (int i = 0; i < 6; ++i) {//6个字节
             if (i == 5) {//最后一个字节
                 cout << hex << (int) etherHeader->dst_mac[i] << endl;
@@ -125,48 +144,72 @@ int main(int argc, char *argv[]) { //argc是参数个数，argv是参数数组
                 cout << hex << (int) etherHeader->dst_mac[i] << ":";
             }
         }
-        cout << "Type: " << hex << ntohs(etherHeader->type) << endl;
-        if (ntohs(etherHeader->type) != 0x0800) { //如果不是IP数据包，跳过
-            cout << "Not IP packet, skip" << endl;
-            continue;
+
+        cout << "Type: " << hex << ntohs(etherHeader->type);
+
+        if (ntohs(etherHeader->type) == 0x800){
+            cout << "(IPv4)" << endl;
+        }
+        else if (ntohs(etherHeader->type) == 0x86dd){
+            cout << "(IPv6)" << endl;
+        }else{
+            cout << "(Unknown)" << endl;
         }
 
+        cout << "----------------------------------------" << endl;
         cout << "network layer" << endl;
         //读取IP头部
-        //IP 数据报头部长度为20字节
-        memset(ipHeader, 0, sizeof(struct ip_header));//清空IP头部
-        if (fread(ipHeader, sizeof(struct ip_header), 1, fp) != 1) { //读取IP头部
-            std::cout << "Read ipHeader failed!!!" << std::endl;
+        //IP数据报头部长度为20字节
+        //fpos_t fpos; //debug
+        //fgetpos(fp, &fpos);//debug
+        fseek(fp,-2,SEEK_CUR);//debug
+        //fgetpos(fp, &fpos);//debug
+        memset(ipHeader, 0, 20);//清空IP头部
+        if (fread(ipHeader, 20, 1, fp) != 1) { //读取IP头部
+            cout << "Read ipHeader failed!!!" << endl;
             continue;
         }
+        //fgetpos(fp, &fpos); //debug
+//        cout << "Version: " << dec << (int) ipHeader->version << endl; //debug
+//        cout << "Protocol: " << dec << (int) ipHeader->protocol << endl; //debug
+//        printf("%X\n",ipHeader->version); //debug
+        if (ntohs(etherHeader->type) == 0x800){
+            inet_ntop(AF_INET, (void *)&(ipHeader->saddr), src_ip, INET_ADDRSTRLEN); //源IP
+            inet_ntop(AF_INET, (void *)&(ipHeader->daddr), dst_ip, INET_ADDRSTRLEN); //目的IP
+        }else if (ntohs(etherHeader->type) == 0x86dd){
+            inet_ntop(AF_INET6, (void *)&(ipHeader->saddr), src_ip, INET6_ADDRSTRLEN); //源IP
+            inet_ntop(AF_INET6, (void *)&(ipHeader->daddr), dst_ip, INET6_ADDRSTRLEN); //目的IP
+        }
 
-        inet_ntop(AF_INET, &ipHeader->saddr, src_ip, sizeof(src_ip)); //源IP
-        inet_ntop(AF_INET, &ipHeader->daddr, dst_ip, sizeof(dst_ip)); //目的IP
-        ip_protocol = ntohs(ipHeader->protocol); //IP协议类型
+        ip_protocol = ipHeader->protocol; //IP协议类型
 
         cout << "Time: " << standardTime << endl;
         cout << "Source IP: " << src_ip << endl;
         cout << "Destination IP: " << dst_ip << endl;
 
-        ip_len = ipHeader->tot_len; //IP数据包长度
+        ip_len = ntohs(ipHeader->tot_len); //IP数据包长度
 
         if (ip_protocol == 6) {
+            cout << "----------------------------------------" << endl;
             cout << "transport layer" << endl;
+            cout << "TCP" << endl;
             //读取TCP头部
             //TCP头部长度为20字节
-            memset(tcpHeader, 0, sizeof(struct tcp_header));//清空TCP头部
-            if (fread(tcpHeader, sizeof(struct tcp_header), 1, fp) != 1) { //读取TCP头部
-                std::cout << "Read tcpHeader failed!!!" << std::endl;
+            fpos_t fpos;
+            fgetpos(fp, &fpos);
+            memset(tcpHeader, 0, sizeof(tcp_header));
+            if (fread(tcpHeader, sizeof(tcp_header), 1, fp) != 1) { //读取TCP头部
+                cout << "Read tcpHeader failed!!!" << endl;
                 continue;
             }
+            fgetpos(fp, &fpos);
             src_port = ntohs(tcpHeader->src_port); //源端口
             dst_port = ntohs(tcpHeader->dst_port); //目的端口
             tcp_flag = tcpHeader->flag; //TCP标志位
-            tcp_len = tcpHeader->len; //TCP数据包长度
 
-            cout << "Source port: " << src_port << endl;
-            cout << "Destination port: " << dst_port << endl;
-            cout << "TCP flag: " << tcp_flag << endl;
+            cout << "Source port: " << dec << src_port << endl;
+            cout << "Destination port: " << dec << dst_port << endl;
+            cout << "TCP flag: " << hex << tcp_flag << endl;
 
             if (tcp_flag) {
                 char flag_name[6][10] = {"FIN", "SYN", "RST", "PSH", "ACK", "URG"};
@@ -175,25 +218,25 @@ int main(int argc, char *argv[]) { //argc是参数个数，argv是参数数组
                 int tmp = tcp_flag;
                 while (tmp) {
                     if (tmp & 1) { //判断最后一位是否为1
-                        cout << flag_name[j] << " ";
+                        cout << flag_name[j] << ",";
                     }
                     tmp = tmp >> 1;//右移一位
                     j++;
                 }
                 cout << "]" << endl;
             }
-
-            if (tcp_flag == 24) { // 0x11000 = 24 即ACK 和 PSH 位为1
-                if (dst_port == 80 || src_port == 80) {
+            if (tcp_flag == 0x18) { // 0x11000 = 24 即ACK 和 PSH 位为1
+                if (dst_port == 0x50 || src_port == 0x50) {
+                    cout << "----------------------------------------" << endl;
                     cout << "Application layer" << endl;
                     //读取HTTP头部
                     //HTTP头部长度为8字节
                     http_len = tcpHeader->len - 40; //TCP头部长度为20字节，IP头部长度为20字节
                     u_int8 http_content_ascii[MAX_PACKET_LEN]; //HTTP内容
                     char http_content[MAX_PACKET_LEN]; //HTTP内容
-                    memset(http_content_ascii, 0, sizeof(http_content_ascii));//清空HTTP内容
-                    if (fread(http_content_ascii, http_len, 1, fp) != 1) { //读取HTTP内容
-                        std::cout << "Read http_content failed!!!" << std::endl;
+                    memset(http_content_ascii, 0, sizeof(u_int8));//清空HTTP内容
+                    if (fread(http_content_ascii, sizeof(u_int8 ), http_len, fp) != http_len) { //读取HTTP内容
+                        cout << "Read http_content failed!!!" << endl;
                         continue;
                     }
 
@@ -224,11 +267,11 @@ int main(int argc, char *argv[]) { //argc是参数个数，argv是参数数组
 
                     if ((*content_type) == 22 && (*handshake_type) == 1) {
                         //Client Hello
+                        cout << "----------------------------------------" << endl;
                         cout << "application layer" << endl;
                         cout << "TLS Client Hello" << endl;
 
-                        fseek(fp, 37,
-                              SEEK_CUR);//跳过Content type, Version, Length, Handshake Protocol 中的 Handshake Type, Length, Version, Random, Session ID Length
+                        fseek(fp, 37,SEEK_CUR);//跳过Content type, Version, Length, Handshake Protocol 中的 Handshake Type, Length, Version, Random, Session ID Length
                         u_int8 *session_id_length; //Session ID Length
                         session_id_length = (u_int8 *) malloc(sizeof(u_int8));
                         fread(session_id_length, sizeof(u_int8), 1, fp);
@@ -515,12 +558,49 @@ int main(int argc, char *argv[]) { //argc是参数个数，argv是参数数组
                         cipher_suites_map[0xC012] = "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA";
                         cipher_suites_map[0xC013] = "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA";
                         cipher_suites_map[0xC014] = "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA";
+                        cipher_suites_map[0xC015] = "TLS_ECDH_anon_WITH_NULL_SHA";
+                        cipher_suites_map[0xC016] = "TLS_ECDH_anon_WITH_RC4_128_SHA";
+                        cipher_suites_map[0xC017] = "TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA";
+                        cipher_suites_map[0xC018] = "TLS_ECDH_anon_WITH_AES_128_CBC_SHA";
+                        cipher_suites_map[0xC019] = "TLS_ECDH_anon_WITH_AES_256_CBC_SHA";
+                        cipher_suites_map[0xC01A] = "TLS_SRP_SHA_WITH_3DES_EDE_CBC_SHA";
+                        cipher_suites_map[0xC01B] = "TLS_SRP_SHA_RSA_WITH_3DES_EDE_CBC_SHA";
+                        cipher_suites_map[0xC01C] = "TLS_SRP_SHA_DSS_WITH_3DES_EDE_CBC_SHA";
+                        cipher_suites_map[0xC01D] = "TLS_SRP_SHA_WITH_AES_128_CBC_SHA";
+                        cipher_suites_map[0xC01E] = "TLS_SRP_SHA_RSA_WITH_AES_128_CBC_SHA";
+                        cipher_suites_map[0xC01F] = "TLS_SRP_SHA_DSS_WITH_AES_128_CBC_SHA";
+                        cipher_suites_map[0xC020] = "TLS_SRP_SHA_WITH_AES_256_CBC_SHA";
+                        cipher_suites_map[0xC021] = "TLS_SRP_SHA_RSA_WITH_AES_256_CBC_SHA";
+                        cipher_suites_map[0xC022] = "TLS_SRP_SHA_DSS_WITH_AES_256_CBC_SHA";
+                        cipher_suites_map[0xC023] = "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256";
+                        cipher_suites_map[0xC024] = "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384";
+                        cipher_suites_map[0xC025] = "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256";
+                        cipher_suites_map[0xC026] = "TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384";
+                        cipher_suites_map[0xC027] = "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256";
+                        cipher_suites_map[0xC028] = "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384";
+                        cipher_suites_map[0xC029] = "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256";
+                        cipher_suites_map[0xC02A] = "TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384";
+                        cipher_suites_map[0xC02B] = "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256";
+                        cipher_suites_map[0xC02C] = "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384";
+                        cipher_suites_map[0xC02D] = "TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256";
+                        cipher_suites_map[0xC02E] = "TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384";
+                        cipher_suites_map[0xC02F] = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
+                        cipher_suites_map[0xC030] = "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384";
+                        cipher_suites_map[0xC031] = "TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256";
+                        cipher_suites_map[0xC032] = "TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384";
+                        cipher_suites_map[0xC033] = "TLS_ECDHE_PSK_WITH_RC4_128_SHA";
+                        cipher_suites_map[0xC034] = "TLS_ECDHE_PSK_WITH_3DES_EDE_CBC_SHA";
+                        cipher_suites_map[0xC035] = "TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA";
+                        cipher_suites_map[0xC036] = "TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA";
+                        cipher_suites_map[0xC037] = "TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA256";
+                        cipher_suites_map[0xC038] = "TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA384";
+                        cipher_suites_map[0xC039] = "TLS_ECDHE_PSK_WITH_NULL_SHA";
+                        // TODO: add more cipher suites
 
 
-                        memset(cipher_suites, 0, sizeof(cipher_suites));//清空Cipher Suites
                         if (fread(cipher_suites, sizeof(u_int16), cipher_suites_num, fp) !=
                             cipher_suites_num) { //读取Cipher Suites
-                            std::cout << "Read cipher_suites failed!!!" << std::endl;
+                            cout << "Read cipher_suites failed!!!" << endl;
                             continue;
                         }
                         for (int i = 0; i < cipher_suites_num; i++) {
@@ -541,45 +621,210 @@ int main(int argc, char *argv[]) { //argc是参数个数，argv是参数数组
                         u_int16 *extension_type;
                         extension_type = (u_int16 *) malloc(sizeof(u_int16));
                         extensions_length = (u_int16 *) malloc(sizeof(u_int16));
-                        while (::fread(extension_type, sizeof(u_int16), 1, fp) == 1) {
-                            ::fread(extensions_length, sizeof(u_int16), 1, fp);
-                            *extension_type = ntohs(*extension_type);
-                            *extensions_length = ntohs(*extensions_length);
-                            if (*extension_type == 0) {
+                        while (fread(extension_type, sizeof(u_int16), 1, fp) == 1) {//读取扩展
+                            fread(extensions_length, sizeof(u_int16), 1, fp);
+                            *extension_type = ntohs(*extension_type);//转换字节序
+                            *extensions_length = ntohs(*extensions_length);//
+                            if (*extension_type == 0) {// Server Name Indication
+                                u_int16 *server_name_list_length;
+                                u_int8 *server_name_type;
+                                u_int16 *server_name_length;
+                                server_name_list_length = (u_int16 *) malloc(sizeof(u_int16));
+                                server_name_type = (u_int8 *) malloc(sizeof(u_int8));
+                                server_name_length = (u_int16 *) malloc(sizeof(u_int16));
+                                fread(server_name_list_length, sizeof(u_int16), 1, fp);
+                                *server_name_list_length = ntohs(*server_name_list_length);
+                                fread(server_name_type, sizeof(u_int8), 1, fp);
+                                fread(server_name_length, sizeof(u_int16), 1, fp);
+                                *server_name_length = ntohs(*server_name_length);
+                                char *server_name;
+                                server_name = (char *) malloc(*server_name_length + 1);
+                                fread(server_name, sizeof(char), *server_name_length, fp);
+                                server_name[*server_name_length] = '\0';
+                                cout << "Server Name: " << server_name << endl;
+                                free(server_name);
+                                free(server_name_length);
+                                free(server_name_type);
+                                free(server_name_list_length);
+                            } else if (*extension_type == 10) {// Supported Elliptic Curves
                                 u_int16 *elliptic_curves_length;
+                                u_int16 *elliptic_curve;
+                                map<u_int16, string> elliptic_curve_map;
+                                // TODO: add more elliptic curves
+
+
                                 elliptic_curves_length = (u_int16 *) malloc(sizeof(u_int16));
-                                ::fread(elliptic_curves_length, sizeof(u_int16), 1, fp);
+                                elliptic_curve = (u_int16 *) malloc(sizeof(u_int16));
+                                fread(elliptic_curves_length, sizeof(u_int16), 1, fp);
                                 *elliptic_curves_length = ntohs(*elliptic_curves_length);
-                                u_int16 *elliptic_curves;
-                                elliptic_curves = (u_int16 *) malloc(sizeof(u_int16) * (*elliptic_curves_length / 2));
-                                ::fread(elliptic_curves, sizeof(u_int16), *elliptic_curves_length / 2, fp);
-                                for (int i = 0; i < *elliptic_curves_length / 2; i++) {
-                                    elliptic_curves[i] = ntohs(elliptic_curves[i]);
-                                    cout << "elliptic_curves: " << elliptic_curves[i] << endl;
+                                while (*elliptic_curves_length > 0) {
+                                    fread(elliptic_curve, sizeof(u_int16), 1, fp);
+                                    *elliptic_curve = ntohs(*elliptic_curve);
+                                    cout << "Elliptic Curve: " << elliptic_curve_map[*elliptic_curve] << "("
+                                         << hex << *elliptic_curve << ")" << endl;
+                                    *elliptic_curves_length -= 2;
                                 }
-                                u_int8 *elliptic_curves_point_format_length;
-                                elliptic_curves_point_format_length = (u_int8 *) malloc(sizeof(u_int8));
-                                ::fread(elliptic_curves_point_format_length, sizeof(u_int8), 1, fp);
-                                u_int8 *elliptic_curves_point_format;
-                                elliptic_curves_point_format = (u_int8 *) malloc(
-                                        sizeof(u_int8) * (*elliptic_curves_point_format_length));
-                                ::fread(elliptic_curves_point_format, sizeof(u_int8),
-                                        *elliptic_curves_point_format_length, fp);
-                                for (int i = 0; i < *elliptic_curves_point_format_length; i++) {
-                                    cout << "elliptic_curves_point_format: " << elliptic_curves_point_format[i] << endl;
+                                free(elliptic_curve);
+                                free(elliptic_curves_length);
+                            } else if (*extension_type == 11) {// Supported Point Formats
+                                u_int8 *supported_point_formats_length;
+                                u_int8 *supported_point_format;
+                                supported_point_formats_length = (u_int8 *) malloc(sizeof(u_int8));
+                                supported_point_format = (u_int8 *) malloc(sizeof(u_int8));
+                                fread(supported_point_formats_length, sizeof(u_int8), 1, fp);
+                                while (*supported_point_formats_length > 0) {
+                                    fread(supported_point_format, sizeof(u_int8), 1, fp);
+                                    cout << "Supported Point Format: " << (int) *supported_point_format << endl;
+                                    *supported_point_formats_length -= 1;
                                 }
-                            } else {
-                                fseek(fp, *extensions_length, SEEK_CUR);
+                                free(supported_point_format);
+                                free(supported_point_formats_length);
+                            } else if ((*extension_type) == 13) {// Signature Algorithms
+                                map<u_int16, string> signature_algorithm_map;
+                                signature_algorithm_map[0x0401] = "RSA_PKCS1_SHA1";
+                                signature_algorithm_map[0x0402] = "RSA_PKCS1_SHA256";
+                                signature_algorithm_map[0x0501] = "ECDSA_SHA1";
+                                //TODO: add more
+
+
+
+                                u_int16 *signature_algorithms_length;
+                                u_int16 *signature_algorithm;
+                                signature_algorithms_length = (u_int16 *) malloc(sizeof(u_int16));
+                                signature_algorithm = (u_int16 *) malloc(sizeof(u_int16));
+                                fread(signature_algorithms_length, sizeof(u_int16), 1, fp);
+                                *signature_algorithms_length = ntohs(*signature_algorithms_length);
+                                while (*signature_algorithms_length > 0) {
+                                    fread(signature_algorithm, sizeof(u_int16), 1, fp);
+                                    *signature_algorithm = ntohs(*signature_algorithm);
+                                    cout << "Signature Algorithm: " << signature_algorithm_map[*signature_algorithm]
+                                         << "(" << hex << *signature_algorithm << ")" << endl;
+                                    *signature_algorithms_length -= 2;
+                                }
+                                free(signature_algorithm);
+                                free(signature_algorithms_length);
+                            } else if (*extension_type == 35) {// Session Ticket TLS
+                                u_int32 *ticket_lifetime_hint;
+                                u_int16 *ticket_length;
+                                ticket_lifetime_hint = (u_int32 *) malloc(sizeof(u_int32));
+                                ticket_length = (u_int16 *) malloc(sizeof(u_int16));
+                                fread(ticket_lifetime_hint, sizeof(u_int32), 1, fp);
+                                fread(ticket_length, sizeof(u_int16), 1, fp);
+                                *ticket_lifetime_hint = ntohl(*ticket_lifetime_hint);
+                                *ticket_length = ntohs(*ticket_length);
+                                cout << "Ticket Lifetime Hint: " << *ticket_lifetime_hint << endl;
+                                cout << "Ticket Length: " << *ticket_length << endl;
+                                fseek(fp, *ticket_length, SEEK_CUR);
+                                free(ticket_length);
                             }
                         }
                     }
+
+
+                }
+            }
+        } else if (ip_protocol == 17) {// UDP
+            cout << "----------------------------------------" << endl;
+            cout << "application protocol: UDP" << endl;
+            //UDP 8 bytes
+            if (fread(udpHeader, sizeof(udp_header), 1, fp) != 1) {
+                cout << "Error reading UDP header" << endl;
+                continue;
+            }
+            src_port = ntohs(udpHeader->src_port);
+            dst_port = ntohs(udpHeader->dst_port);
+
+            int udp_length = ntohs(udpHeader->len);
+            int udp_checksum = ntohs(udpHeader->check);
+            cout << "Source Port: " << dec <<src_port << endl;
+            cout << "Destination Port: " << dec << dst_port << endl;
+            cout << "Length: " << udp_length << endl;
+            cout << "Checksum: " << udp_checksum << endl;
+
+            //DNS
+            if (src_port == 53 || dst_port == 53) {
+                cout << "application protocol: DNS" << endl;
+                dns_len = ip_len - 28 - 12; //ip_len - ip_header_len - udp_header_len
+                if (fread(dnsHeader, sizeof(dns_header), 1, fp) != 1) {
+                    cout << "Error reading DNS header" << endl;
+                    continue;
+                }
+                u_int16 transaction_id = ntohs(dnsHeader->id);
+                u_int16 flags = ntohs(dnsHeader->flags);
+                u_int16 questions = ntohs(dnsHeader->qdcount);
+                u_int16 answer_rrs = ntohs(dnsHeader->ancount);
+
+                cout << "Transaction ID: " << transaction_id << endl;
+                cout << "Flags: " << flags << endl;
+                cout << "Questions: " << questions << endl;
+                cout << "Answer RRs: " << answer_rrs << endl;
+
+                u_int8 dns_content_ascii[MAX_PACKET_LEN];
+                char dns_content[MAX_PACKET_LEN];
+                memset(dns_content_ascii, 0, sizeof(u_int8));
+                if (fread(dns_content_ascii, sizeof(u_int8), dns_len - 12, fp) != dns_len - 12) {
+                    cout << "Error reading DNS content" << endl;
+                    continue;
                 }
 
+                int p = 0; //dns_content index
+                bool flag = true; // if flag is true, then it is a letter, otherwise it is a dot
+                for (int i = 0; i < dns_len - 12; i++) {//dns_len - 12 is the length of dns_content_ascii
+                    if (dns_content_ascii[i] == 0x00) {// 0x00 is the end of a domain name
+                        if (flag) {// if flag is true, then it is a letter, otherwise it is a dot
+                            dns_content[p] = '.';// replace 0x00 with a dot
+                            p++;// move to the next position
+                            flag = false;// set flag to false
+                        }
+                    } else {
+                        dns_content[p] = dns_content_ascii[i];// copy the letter to dns_content
+                        p++;
+                        flag = true;//
+                    }
+                }
+                cout << "DNS Content: " << dns_content << endl;
 
+                if (answer_rrs) {
+                    cout << "Answer RRs: ";
+                    for (int i = 0; i < answer_rrs; i++) {
+                        u_int16 name;
+                        u_int16 type;
+                        u_int16 class_;
+                        u_int32 ttl;
+                        u_int16 data_len;
+                        u_int32 ip;
+                        fread(&name, sizeof(u_int16), 1, fp);
+                        fread(&type, sizeof(u_int16), 1, fp);
+                        fread(&class_, sizeof(u_int16), 1, fp);
+                        fread(&ttl, sizeof(u_int32), 1, fp);
+                        fread(&data_len, sizeof(u_int16), 1, fp);
+                        fread(&ip, sizeof(u_int32), 1, fp);
+                        name = ntohs(name);
+                        type = ntohs(type);
+                        class_ = ntohs(class_);
+                        ttl = ntohl(ttl);
+                        data_len = ntohs(data_len);
+                        ip = ntohl(ip);
+                        cout << "Name: " << name << endl;
+                        cout << "Type: " << type << endl;
+                        cout << "Class: " << class_ << endl;
+                        cout << "TTL: " << ttl << endl;
+                        cout << "Data Length: " << data_len << endl;
+                        cout << "IP: " << ip << endl;
+                    }
+                }
             }
-
-            std::cout << "Finished!!!" << std::endl;
-            return 0;
         }
     }
+    fclose(fp);
+    free(pcapHeader);
+    free(etherHeader);
+    free(ipHeader);
+    free(tcpHeader);
+    free(udpHeader);
+    free(dnsHeader);
+
+    cout << "-----------------------------" << endl;
+    cout << "finish" << endl;
+    return 0;
 }

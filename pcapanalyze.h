@@ -26,8 +26,8 @@ typedef uint8_t u_int8;
  */
 struct pcap_file_header {
     bpf_u_int32 magic;
-    u_short version_major; //主版本号
-    u_short version_minor; //次版本号
+    u_int16 version_major; //主版本号
+    u_int16 version_minor; //次版本号
     bpf_int32 thiszone; //GMT to local correction
     bpf_u_int32 sigfigs; //accuracy of timestamps
     bpf_u_int32 snaplen; //max length saved portion of each pkt
@@ -37,7 +37,7 @@ struct pcap_file_header {
 struct time_stamp {
     bpf_int32 tv_sec; //seconds
     bpf_int32 tv_usec; //microseconds
-}timeStamp;
+};
 /*
  * pcap数据包头部
  * ts_sec(4B): 0x00000000 (timestamp seconds)
@@ -49,7 +49,7 @@ struct pcap_pkthdr {
     struct time_stamp ts; //time stamp
     bpf_u_int32 caplen; //length of portion present
     bpf_u_int32 len; //length this packet (off wire)
-};
+}pcap_pkthdr;
 
 /*
  * 以太网帧头部
@@ -62,34 +62,73 @@ struct ether_header {
     u_int8 dst_mac[6]; //目的MAC地址
     u_int8 src_mac[6]; //源MAC地址
     u_int16 type;//上层协议类型
-}etherHeader;
+}ether_header;
 
 /*
- * IP头部
- * version(1B): 0x45 (version and header length)
+ * IPv4头部
+ * version(1B): 0x40 (version)
+ * len(1B): 0x00 (header length)
  * tos(1B): 0x00 (type of service)
- * tot_len(2B): 0x0028 (total length)
+ * total_len(2B): 0x0000 (total length)
  * id(2B): 0x0000 (identification)
- * frag_off(2B): 0x0000 (fragment offset field)
- * ttl(1B): 0x40 (time to live)
- * protocol(1B): 0x06 (protocol)
- * check(2B): 0x0000 (checksum)
- * saddr(4B): 0x00000000 (source address)
- * daddr(4B): 0x00000000 (destination address)
+ * flag(1B): 0x00 (flags)
+ * offset(1B): 0x00 (fragment offset)
+ * ttl(1B): 0x00 (time to live)
+ * protocol(1B): 0x00 (protocol)
+ * check(2B): 0x0000 (header checksum)
+ * src_ip(4B): 0x00000000 (source ip address)
+ * dst_ip(4B): 0x00000000 (destination ip address)
  */
-
-struct ip_header {
+struct ip_header{
     u_int8 version; //版本
     u_int8 tos; //服务类型
     u_int16 tot_len; //总长度
     u_int16 id; //标识
-    u_int16 frag_off; //标志位
+    u_int16 offset;
     u_int8 ttl; //生存时间
-    u_int8 protocol; //协议类型
+    u_int8 protocol; //协议
     u_int16 check; //校验和
     u_int32 saddr; //源IP地址
     u_int32 daddr; //目的IP地址
-}ipHeader;
+}ip_header;
+//struct ipv4_header {
+//    u_int8 version; //版本
+//    u_int8 len; //头部长度
+//    u_int8 tos; //服务类型
+//    u_int16 total_len; //总长度
+//    u_int16 id; //标识
+//    u_int8 flag; //标志
+//    u_int8 offset; //偏移
+//    u_int8 ttl; //生存时间
+//    u_int8 protocol; //协议
+//    u_int16 check; //校验和
+//    u_int32 src_ip; //源IP地址
+//    u_int32 dst_ip; //目的IP地址
+//}ipv4Header;
+
+/*IPv6头部
+ * version(1B): 0x60 (version)
+ * traffic_class(1B): 0x00 (traffic class)
+ * flow_label(3B): 0x000000 (flow label)
+ * payload_len(2B): 0x0000 (payload length)
+ * next_header(1B): 0x00 (next header)
+ * hop_limit(1B): 0x00 (hop limit)
+ * src_ip(16B): 0x0000000
+ * dst_ip(16B): 0x0000000
+ */
+
+//struct ipv6_header {
+//    u_int8 version; //版本
+//    u_int8 traffic_class; //流量类型
+//    u_int32 flow_label; //流标签
+//    u_int16 payload_len; //负载长度
+//    u_int8 next_header; //下一头部
+//    u_int8 hop_limit; //跳数限制
+//    u_int8 src_ip[16]; //源IP地址
+//    u_int8 dst_ip[16]; //目的IP地址
+//}ipv6Header;
+
+
 
 /*
  * TCP头部
@@ -98,12 +137,8 @@ struct ip_header {
  * seq(4B): 0x00000000 (sequence number)
  * ack_seq(4B): 0x00000000 (acknowledgement number)
  * doff(1B): 0x50 (data offset)
- * fin(1B): 0x00 (FIN control flag)
- * syn(1B): 0x00 (SYN control flag)
- * rst(1B): 0x00 (RST control flag)
- * psh(1B): 0x00 (PSH control flag)
- * ack(1B): 0x00 (ACK control flag)
- * urg(1B): 0x00 (URG control flag)
+ * len(1B): 0x00 (reserved)
+ * flag(1B): 0x00 (flags)
  * window(2B): 0x0000 (window)
  * check(2B): 0x0000 (checksum)
  * urg_ptr(2B): 0x0000 (urgent pointer)
@@ -114,19 +149,12 @@ struct tcp_header {
     u_int16 dst_port; //目的端口
     u_int32 seq; //序列号
     u_int32 ack_seq; //确认号
-    u_int8 doff; //数据偏移
     u_int8 len; //长度
     u_int8 flag; //标志位
-    u_int8 fin; //FIN标志
-    u_int8 syn; //SYN标志
-    u_int8 rst; //RST标志
-    u_int8 psh; //PSH标志
-    u_int8 ack; //ACK标志
-    u_int8 urg; //URG标志
     u_int16 window; //窗口大小
     u_int16 check; //校验和
     u_int16 urg_ptr; //紧急指针
-}tcpHeader;
+}tcp_header;
 
 /*
  * UDP头部
@@ -141,7 +169,7 @@ struct udp_header {
     u_int16 dst_port; //目的端口
     u_int16 len; //长度
     u_int16 check; //校验和
-}udpHeader;
+}udp_header;
 
 /*
  * ICMP头部
@@ -157,7 +185,7 @@ struct icmp_header {
     u_int16 check; //校验和
     u_int16 id; //标识符
     u_int16 seq; //序列号
-}icmpHeader;
+}icmp_header;
 
 /*
  * IGMP头部
@@ -172,7 +200,7 @@ struct  igmp_header {
     u_int8 max_resp_time; //最大响应时间
     u_int16 check; //校验和
     u_int32 group; //组地址
-}igmpHeader;
+}igmp_header;
 
 /*
  * ARP头部
@@ -197,7 +225,7 @@ struct arp_header {
     u_int32 spa; //发送方协议地址
     u_int8 tha[6]; //目的方硬件地址
     u_int32 tpa; //目的方协议地址
-}arpHeader;
+}arp_header;
 
 /*
  * DNS头部
@@ -215,13 +243,13 @@ struct dns_header {
     u_int16 ancount; //回答数
     u_int16 nscount; //授权数
     u_int16 arcount; //附加数
-}dnsHeader;
+}dns_header;
 
 /* DNS查询结构体 */
 struct dns_query {
     u_int16 qtype; //查询类型
     u_int16 qclass; //查询类
-}dnsQuery;
+}dns_query;
 
 /* DNS回答结构体 */
 struct dns_answer {
@@ -229,7 +257,7 @@ struct dns_answer {
     u_int16 classanswer; //回答类
     u_int32 ttl; //生存时间
     u_int16 data_len; //数据长度
-}dnsAnswer;
+}dns_answer;
 
 /* DNS资源记录结构体 */
 struct dns_rr {
@@ -237,11 +265,11 @@ struct dns_rr {
     u_int16 classrr; //资源记录类
     u_int32 ttl; //生存时间
     u_int16 data_len; //数据长度
-}dnsRR;
+}dns_rr;
 
 /* DNS压缩结构体 */
 struct dns_compression {
     u_int16 offset; //偏移量
-}dnsCompression;
+}dns_compression;
 
 #endif //PCAPANALYZE_PCAPANALYZE_H
